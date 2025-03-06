@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody))]
+[RequireComponent(typeof(AudioSource))]
 public class Projectile : MonoBehaviour
 {
     const int LOOKBACK_COUNT = 10;
@@ -18,13 +19,43 @@ public class Projectile : MonoBehaviour
     private Vector3 prevPos;
     private List<float> deltas = new List<float>();
     private Rigidbody rigid;
+    private AudioSource audioSource;
+    [Header("Audio")]
+    public AudioClip whirSound;
 
+    [Header("Skins")]
+    public Material defaultMaterial;
+    public Material[] skinMaterials; // Array to hold available skin materials
+    [SerializeField]
+    private Renderer projectileRenderer;
     void Start(){
         rigid = GetComponent<Rigidbody>();
         awake = true;
         prevPos = new Vector3(1000,1000,0);
         deltas.Add(1000);
         PROJECTILES.Add(this);
+
+        audioSource = GetComponent<AudioSource>();
+        audioSource.clip = whirSound;
+        audioSource.loop = true;
+        audioSource.playOnAwake = false;
+
+        if (projectileRenderer == null) {
+        projectileRenderer = GetComponent<Renderer>();
+        }
+
+        if (projectileRenderer == null) {
+            Debug.LogError("Renderer component not found on the projectile GameObject or its children.");
+            return;
+        }
+
+        // Apply the saved skin from PlayerPrefs
+        int selectedSkin = PlayerPrefs.GetInt("SelectedSkin", -1);
+        if (selectedSkin >= 0) {
+            ApplySkin(selectedSkin);
+        } else {
+            ApplyDefaultSkin();
+        }
     }
 
     void FixedUpdate(){
@@ -46,16 +77,35 @@ public class Projectile : MonoBehaviour
         if(maxDelta <= Physics.sleepThreshold){
             awake = false;
             rigid.Sleep();
+            audioSource.Stop();
+        }
+        if (!audioSource.isPlaying && awake) {
+            audioSource.Play();
         }
     }
 
     public void OnDestroy(){
         PROJECTILES.Remove(this);
+        audioSource.Stop();
     }
 
     static public void DESTROY_PROJECTILES(){
         foreach(Projectile p in PROJECTILES){
             Destroy(p.gameObject);
+        }
+    }
+     public void ApplySkin(int skinIndex) {
+        if (skinMaterials != null && skinIndex < skinMaterials.Length) {
+            projectileRenderer.material = skinMaterials[skinIndex];
+        } else {
+            ApplyDefaultSkin();
+        }
+    }
+
+    // Apply the default material if no skin is selected
+    public void ApplyDefaultSkin() {
+        if (defaultMaterial != null) {
+            projectileRenderer.material = defaultMaterial;
         }
     }
 }

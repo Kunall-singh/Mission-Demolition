@@ -17,6 +17,7 @@ public class MissionDemolition : MonoBehaviour
     public Text uitShots;
     public Vector3 castlePos;
     public GameObject[] castles;
+    public UIManager uiManager;
 
     [Header("Dynamic")]
     public int level;
@@ -52,8 +53,9 @@ public class MissionDemolition : MonoBehaviour
     }
 
     void UpdateGUI(){
-        uitLevel.text = "Level: "+(level+1)+" of "+levelMax;
-        uitShots.text = "Shots Taken: "+ shotsTaken;
+        int displayLevel = Mathf.Min(level + 1, levelMax);
+        uitLevel.text = "Level: " + displayLevel + " of " + levelMax;
+        uitShots.text = "Shots Taken: " + shotsTaken;
     }
 
     void Update(){
@@ -62,15 +64,19 @@ public class MissionDemolition : MonoBehaviour
         if((mode == GameMode.playing) && Goal.goalMet){
             mode = GameMode.levelEnd;
             FollowCam.SWITCH_VIEW(FollowCam.eView.both);
+            ScoreManager.AddScore(shotsTaken);
+            ShopManager.Instance.UpdateShopUI();
             Invoke("NextLevel", 2f);
         }
     }
 
     void NextLevel(){
         level++;
-        if(level == levelMax){
-            level = 0;
-            shotsTaken = 0;
+        if (level >= levelMax)
+        {
+             level = levelMax - 1;
+            uiManager.ShowGameOver();
+            return;
         }
         StartLevel();
     }
